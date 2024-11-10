@@ -16,4 +16,26 @@ def get_user():
 def get_time():
     return datetime.datetime.utcnow()
 
-# Complete. 
+# Define post model
+db.define_table(
+    'post',
+    Field('user_id', 'reference auth_user', default=get_user),
+    Field('user_email', 'string', default=get_user_email),
+    Field('content', 'text', requires=IS_NOT_EMPTY()),
+    Field('created_on', 'datetime', default=get_time),
+)
+
+# Define tag model
+db.define_table(
+    'tag',
+    Field('name', 'string', unique=True),
+)
+
+# Relationship between posts and tags
+db.define_table(
+    'post_tag',
+    Field('post_id', 'reference post'),
+    Field('tag_id', 'reference tag'),
+)
+
+db.commit()
