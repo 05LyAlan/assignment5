@@ -1,11 +1,6 @@
-"""
-This file defines the database models
-"""
-import datetime
-import re
-
 from .common import db, Field, auth
 from pydal.validators import *
+import datetime
 
 def get_user_email():
     return auth.current_user.get('email') if auth.current_user else None
@@ -16,11 +11,11 @@ def get_user():
 def get_time():
     return datetime.datetime.utcnow()
 
-# Define post model
+# Define post model with user_email
 db.define_table(
     'post',
     Field('user_id', 'reference auth_user', default=get_user),
-    Field('user_email', 'string', default=get_user_email),
+    Field('user_email', 'string', default=get_user_email),  # New field for user email
     Field('content', 'text', requires=IS_NOT_EMPTY()),
     Field('created_on', 'datetime', default=get_time),
 )
