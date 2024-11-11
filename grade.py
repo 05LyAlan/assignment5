@@ -34,11 +34,10 @@ class StopGrading(Exception):
 
 class py4web(object):
     
-    def start_server(self, path_to_app, port=8400, debug=False):
-        self.debug = debug
+    def start_server(self, path_to_app, args=None):
+        self.debug = args.debug
         print("Starting the server")
-        self.port = port
-        self.debug = debug
+        self.port = args.port
         self.app_name = os.path.basename(path_to_app)
         subprocess.run(
             "rm -rf /tmp/apps && mkdir -p /tmp/apps && echo '' > /tmp/apps/__init__.py",
@@ -76,12 +75,10 @@ class py4web(object):
                     raise StopGrading
                 print("- app started!")
                 break
-        if self.debug:
-            self.browser = webdriver.Firefox()
-        else:
-            browser_options = webdriver.ChromeOptions()
+        browser_options = webdriver.ChromeOptions()
+        if not self.debug:
             browser_options.add_argument("--headless")
-            self.browser =  webdriver.Chrome(options=browser_options)
+        self.browser =  webdriver.Chrome(options=browser_options)
         
     def __del__(self):
         if self.server:
@@ -97,7 +94,7 @@ class py4web(object):
             print("- browser stopped.")
         
     def goto(self, path):
-        self.browser.get(f"http://127.0.0.1:{self.port}/{self.app_name}/{path}")
+        self.browser.get(f"http://127.0.0.1:{args.port}/{self.app_name}/{path}")
         self.browser.implicitly_wait(0.2)
         
     def refresh(self):
@@ -123,9 +120,9 @@ class py4web(object):
 
 class ProtoAssignment(py4web):
     
-    def __init__(self, app_path, debug=False):
+    def __init__(self, app_path, args=None):
         super().__init__()
-        self.start_server(app_path, debug=debug)
+        self.start_server(app_path, args=args)
         self._comments = []
         self.user1 = self.get_user()
         self.user2 = self.get_user()
@@ -173,8 +170,8 @@ class ProtoAssignment(py4web):
 
 class Assignment(ProtoAssignment):
     
-    def __init__(self, app_path, debug=False):
-        super().__init__(os.path.join(app_path, "apps/topical"), debug=debug)
+    def __init__(self, app_path, args=None):
+        super().__init__(os.path.join(app_path, "apps/topical"), args=args)
         self.item = ""
         self.tag1 = "".join(random.choices("abcdefghilmnopqrstuvz", k=8))
         self.tag2 = "".join(random.choices("abcdefghilmnopqrstuvz", k=8))
@@ -259,6 +256,7 @@ class Assignment(ProtoAssignment):
         time.sleep(SERVER_WAIT)
         assert len(self.get_posts()) == 1, f"S4-3 There should be one post with #{self.tag3}."
         self.login(self.user2)
+        time.sleep(SERVER_WAIT)
         anchovies_tag = self.find_tag(self.tag3)
         anchovies_tag.click()
         time.sleep(SERVER_WAIT)
@@ -267,7 +265,7 @@ class Assignment(ProtoAssignment):
     
     def step5(self):
         """Deletion."""
-        self.browser.refresh()
+        self.login(self.user2)
         time.sleep(SERVER_WAIT)
         posts = self.get_posts()
         has_button = [len(p.find_elements(By.CSS_SELECTOR, "button.delete-button")) > 0 for p in posts]
@@ -314,6 +312,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', default=False, action='store_true',
                         help="Debug mode (show browser).")
-
-    tests = Assignment(".", debug=parser.parse_args().debug)
+    parser.add_argument("--port", default=8800, type=int, 
+                            help="Port to run the server on.")
+    args = parser.parse_args()
+    tests = Assignment(".", args=args)
     tests.grade()
