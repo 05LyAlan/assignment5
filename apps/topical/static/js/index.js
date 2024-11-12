@@ -1,7 +1,5 @@
 "use strict";
 
-// This will be the object that will contain the Vue attributes
-// and be used to initialize it.
 let app = {
     data() {
         return {
@@ -14,11 +12,8 @@ let app = {
     },
     computed: {
         filteredPosts() {
-            if (this.activeTags.length === 0) {
-                return this.posts;
-            }
+            if (this.activeTags.length === 0) return this.posts;
             
-            console.log("Active Tags:", this.activeTags);
             return this.posts.filter(post => {
                 const postTags = [...post.tags];
                 return postTags.some(tag => this.activeTags.includes(tag));
@@ -29,11 +24,12 @@ let app = {
         // Fetch all posts and tags
         loadPosts() {
             axios.get(get_posts_url).then(response => {
-                console.log("Posts fetched:", response.data.posts);
+                //console.log("Posts fetched:", response.data.posts);
                 this.posts = response.data.posts.map(post => ({
                     ...post,
                     tags: post.tags || [],
                 }));
+
                 const allTags = new Set();
                 this.posts.forEach(post => {
                     post.tags.forEach(tag => allTags.add(tag));
@@ -86,11 +82,12 @@ let app = {
                 return;
             }
             
-            const postTags = post.tags;
             axios.post(delete_post_url, { post_id: postId }).then(() => {
                 this.posts = this.posts.filter(p => p.id !== postId);
-                this.updateTags(postTags);
+                this.updateTags(post.tags);
                 this.loadPosts();
+            }).catch(error => {
+                console.error("Error deleting post:", error);
             });
         },
     

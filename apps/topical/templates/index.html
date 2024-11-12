@@ -36,7 +36,6 @@
   .tags-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
   }
 </style>
 
@@ -55,14 +54,13 @@
     <h2 class="mt-2 mb-4 has-text-weight-bold title-color">Daily Slug Posts</h2>
     <div v-for="post in filteredPosts" :key="post.id" class="post box mb-4 box-color" style="position: relative; padding-bottom: 2rem;">
       <p class="post-content has-text-weight-bold">{{ post.content }}</p>
-
       <p>Posted on {{ post.created_on }} by user {{ post.user_email }}</p>
       
       <div v-if="post.user_email === currentUser" style="position: absolute; bottom: 1rem; right: 1rem;">
         <button 
           @click="deletePost(post.id)"
           class="button is-danger is-small delete-button">
-          <span class="icon"><i class="fa fa-trash"></i></span>
+          <i class="fa fa-trash"></i>
         </button>
       </div>
     </div>
@@ -71,17 +69,17 @@
   <!-- Right Column (1/4 width): Tags -->
   <div class="right-column" style="width: 25%; float: left;">
     <h1 class="mb-4 has-text-weight-bold title-color">Tags</h1>
-    <div class="tags-container">
+    <div class="tags tags-container">
       <button
         v-for="tag in tags"
         :key="tag.name"
+        class="button tag is-rounded is-focused"
         :class="{
           'button': true,
           'is-success': activeTags.includes(tag.name),
           'is-light': !activeTags.includes(tag.name)
         }"
-        @click="toggleTag(tag.name)"
-        class="is-rounded is-focused">
+        @click="toggleTag(tag.name)">
         {{ tag.name }}
       </button>
     </div>

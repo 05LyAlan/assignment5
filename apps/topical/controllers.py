@@ -17,7 +17,6 @@ def index():
         current_user_email=get_user_email()
     )
 
-
 @action('get_posts')
 @action.uses(db, auth.user)
 def get_posts():
@@ -27,6 +26,7 @@ def get_posts():
     posts = db(db.post).select(orderby=~db.post.created_on).as_list()
 
     for post in posts:
+        # Retrieve tags associated with each post
         post_tags = db((db.post_tag.post_id == post['id']) & (db.post_tag.tag_id == db.tag.id)).select(db.tag.name)
         post['tags'] = [tag.name for tag in post_tags]
 
@@ -42,10 +42,11 @@ def create_post():
     if not content:
         return dict(error="Post content cannot be empty.")
 
+    # Insert new post and tags
     user_email = get_user_email()
-
     post_id = db.post.insert(content=content, user_email=user_email)
 
+    # Parse in tags
     tags = set(re.findall(r"#(\w+)", content))
     tag_ids = []
     for tag_name in tags:
@@ -54,6 +55,7 @@ def create_post():
             tag = db.tag.insert(name=tag_name)
         tag_ids.append(tag.id)
 
+    # Make a connection between tag and post
     for tag_id in tag_ids:
         db.post_tag.insert(post_id=post_id, tag_id=tag_id)
 
@@ -69,14 +71,15 @@ def delete_post():
     post_id = request.json.get('post_id')
     post = db.post(post_id)
 
+    # Make sure deletion by original author
     if not post or post.user_email != get_user_email():
         abort(403, "Unauthorized deletion attempt.")
 
     tags_in_post = db(db.post_tag.post_id == post_id).select(db.post_tag.tag_id).as_list()
-    db(db.post_tag.post_id == post_id).delete()
-    
+    db(db.post_tag.post_id == post_id).delete() 
     db(db.post.id == post_id).delete()
 
+    # Remove abandoned tags
     for tag in tags_in_post:
         tag_id = tag['tag_id']
         if not db(db.post_tag.tag_id == tag_id).count():

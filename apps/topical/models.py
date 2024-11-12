@@ -2,6 +2,7 @@ from .common import db, Field, auth
 from pydal.validators import *
 import datetime
 
+# Helper functions to get current user and time
 def get_user_email():
     return auth.current_user.get('email') if auth.current_user else None
 
@@ -11,6 +12,7 @@ def get_user():
 def get_time():
     return datetime.datetime.utcnow()
 
+# Define tables
 db.define_table(
     'post',
     Field('user_id', 'reference auth_user', default=get_user),
@@ -30,4 +32,5 @@ db.define_table(
     Field('tag_id', 'reference tag'),
 )
 
+# Commit table definitions to db
 db.commit()
