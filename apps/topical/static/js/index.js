@@ -9,23 +9,20 @@ let app = {
             tags: [],
             activeTags: [],
             newPostContent: "",
-            currentUser: current_user_email, // This will hold the current user's email
+            currentUser: current_user_email,
         };
     },
     computed: {
-        // Compute filtered posts based on active tags
         filteredPosts() {
             if (this.activeTags.length === 0) {
-                console.log("All posts:", this.posts);  // Log all posts
                 return this.posts;
             }
-
-            const filtered = this.posts.filter(post =>
-                post.tags.some(tag => this.activeTags.includes(tag))
-            );
             
-            console.log("Filtered posts:", filtered);  // Log filtered posts based on active tags
-            return filtered;
+            console.log("Active Tags:", this.activeTags);
+            return this.posts.filter(post => {
+                const postTags = [...post.tags];
+                return postTags.some(tag => this.activeTags.includes(tag));
+            });
         }
     },
     methods: {
@@ -35,10 +32,14 @@ let app = {
                 console.log("Posts fetched:", response.data.posts);
                 this.posts = response.data.posts.map(post => ({
                     ...post,
-                    tags: post.tags || [], // Ensure tags are included
+                    tags: post.tags || [],
                 }));
-                console.log("Loaded Posts:", this.posts);  // Log to check the loaded posts
-                this.tags = response.data.tags;
+                const allTags = new Set();
+                this.posts.forEach(post => {
+                    post.tags.forEach(tag => allTags.add(tag));
+                });
+        
+                this.tags = Array.from(allTags).map(tag => ({ name: tag }));
             }).catch(error => {
                 console.error("Error loading posts:", error);
             });
@@ -51,40 +52,33 @@ let app = {
                 return;
             }
     
-            // Create a temporary post object
             const newPost = {
                 content: this.newPostContent,
                 user_email: this.currentUser,
-                created_on: new Date().toISOString(), // Set the current date and time
-                tags: this.extractTags(this.newPostContent), // Optional: Extract tags if needed
+                created_on: new Date().toISOString(),
+                tags: this.extractTags(this.newPostContent),
             };
     
-            // Add the new post to the front of the list (to show it immediately)
             this.posts.unshift(newPost);
     
-            // Post the new post to the server
             axios.post(create_post_url, { content: this.newPostContent }).then(response => {
-                // Clear the input field after posting
                 this.newPostContent = "";
-                // Optionally reload posts from the server
                 this.loadPosts();
             }).catch(error => {
                 console.error("Failed to create post", error);
             });
         },
     
-        // Extract tags from post content
         extractTags(content) {
             const tags = new Set();
             const regex = /#(\w+)/g;
             let match;
             while ((match = regex.exec(content)) !== null) {
-                tags.add(match[1]); // Add the tag without the '#'
+                tags.add(match[1]);
             }
             return Array.from(tags);
         },
     
-        // Delete a post
         deletePost(postId) {
             const post = this.posts.find(p => p.id === postId);
             if (post.user_email !== this.currentUser) {
@@ -92,12 +86,14 @@ let app = {
                 return;
             }
             
+            const postTags = post.tags;
             axios.post(delete_post_url, { post_id: postId }).then(() => {
-                this.loadPosts(); // Refresh the posts list after deletion
+                this.posts = this.posts.filter(p => p.id !== postId);
+                this.updateTags(postTags);
+                this.loadPosts();
             });
         },
     
-        // Toggle the active/inactive state of a tag
         toggleTag(tag) {
             if (this.activeTags.includes(tag)) {
                 this.activeTags = this.activeTags.filter(t => t !== tag);
@@ -105,10 +101,20 @@ let app = {
                 this.activeTags.push(tag);
             }
         },
+
+        updateTags(postTags) {
+            postTags.forEach(tag => {
+                const isOrphaned = !this.posts.some(post => post.tags.includes(tag));
+    
+                if (isOrphaned) {
+                    this.tags = this.tags.filter(t => t.name !== tag);
+                    this.activeTags = this.activeTags.filter(t => t !== tag);
+                }
+            });
+        }
     }
 };
 
-// Mounted lifecycle hook to load posts when the app is initialized
 app.mounted = function() {
     this.loadPosts();
 };

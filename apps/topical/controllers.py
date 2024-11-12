@@ -25,13 +25,12 @@ def get_posts():
     Returns a list of all posts and tags for the logged-in user.
     """
     posts = db(db.post).select(orderby=~db.post.created_on).as_list()
-    tags = db(db.tag).select().as_list()
 
     for post in posts:
-        post_tags = db(db.post_tag.post_id == post['id']).select(db.tag.name)
+        post_tags = db((db.post_tag.post_id == post['id']) & (db.post_tag.tag_id == db.tag.id)).select(db.tag.name)
         post['tags'] = [tag.name for tag in post_tags]
-    
-    return dict(posts=posts, tags=tags)
+
+    return dict(posts=posts)
 
 @action('create_post', method="POST")
 @action.uses(db, auth.user)
@@ -45,21 +44,16 @@ def create_post():
 
     user_email = get_user_email()
 
-    # Insert the new post
     post_id = db.post.insert(content=content, user_email=user_email)
 
-    # Extract and store tags
-    tags = set(re.findall(r"#(\w+)", content))  # Extract tags from content
+    tags = set(re.findall(r"#(\w+)", content))
     tag_ids = []
     for tag_name in tags:
-        # Check if tag already exists
-        tag = db(db.tag.name == tag_name).select().first()  # Select tag if it exists
+        tag = db(db.tag.name == tag_name).select().first()
         if not tag:
-            # Insert new tag if not found
             tag = db.tag.insert(name=tag_name)
         tag_ids.append(tag.id)
 
-    # Link tags to the post
     for tag_id in tag_ids:
         db.post_tag.insert(post_id=post_id, tag_id=tag_id)
 
@@ -75,18 +69,14 @@ def delete_post():
     post_id = request.json.get('post_id')
     post = db.post(post_id)
 
-    # Ensure the post exists and belongs to the current user
     if not post or post.user_email != get_user_email():
         abort(403, "Unauthorized deletion attempt.")
 
-    # Delete the post
+    tags_in_post = db(db.post_tag.post_id == post_id).select(db.post_tag.tag_id).as_list()
+    db(db.post_tag.post_id == post_id).delete()
+    
     db(db.post.id == post_id).delete()
 
-    # Clean up orphan tags
-    tags_in_post = db(db.post_tag.post_id == post_id).select(db.post_tag.tag_id).as_list()
-    db(db.post_tag.post_id == post_id).delete()  # Remove tag relationships for the post
-
-    # Remove tags with no associated posts left
     for tag in tags_in_post:
         tag_id = tag['tag_id']
         if not db(db.post_tag.tag_id == tag_id).count():

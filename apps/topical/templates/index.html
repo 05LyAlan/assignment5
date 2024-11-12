@@ -8,6 +8,12 @@
     flex-direction: column;
     min-height: 100vh;
   }
+
+  .tags-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
 </style>
 
 
@@ -19,7 +25,7 @@
     <button id="post-button" class="button is-success mt-2" @click="createPost">Post</button>
 
     <!-- Post Feed -->
-    <h2>Posts</h2>
+    <h2 class="mt-2 mb-4 has-text-weight-bold">Daily Slug Posts</h2>
     <div v-for="post in filteredPosts" :key="post.id" class="post box mb-4" style="position: relative; padding-bottom: 2rem;">
       <p class="post-content">{{ post.content }}</p>
 
@@ -40,25 +46,22 @@
   <!-- Right Column (1/4 width): Tags -->
   <div class="right-column" style="width: 25%; float: left;">
     <h1 class="mb-4 has-text-weight-bold">Tags</h1>
-    <div class="tags">
-      <div class="columns is-multiline is-gapless">
-        <div class="column is-6" v-for="tag in tags" :key="tag.id">
-          <button
-            :class="{
-              'button': true,
-              'is-success': activeTags.includes(tag.name),
-              'is-light': !activeTags.includes(tag.name)
-            }"
-            @click="toggleTag(tag.name)"
-            class="mr-1 mb-2 is-rounded is-focused">
-            {{ tag.name }}
-          </button>
-        </div>
-      </div>
+    <div class="tags-container">
+      <button
+        v-for="tag in tags"
+        :key="tag.name"
+        :class="{
+          'button': true,
+          'is-success': activeTags.includes(tag.name),
+          'is-light': !activeTags.includes(tag.name)
+        }"
+        @click="toggleTag(tag.name)"
+        class="is-rounded is-focused">
+        {{ tag.name }}
+      </button>
     </div>
   </div>
 </div>
-
 
 [[block page_scripts]]
 <script>
